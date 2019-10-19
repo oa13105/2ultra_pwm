@@ -1,10 +1,10 @@
 double Input, Output;
 
 //PID parameters
-double Kp = 14 ;
+double Kp = 4 ;
 double Ki = 0.0 ;
 double Kd = 0.4;
-const int Setpoint = 5;
+const int Setpoint = 10;
 double ki, kd;
 
 //Pin Setup
@@ -14,21 +14,20 @@ const int EchoPinR = 4;
 const int TrigPinR = 5;
 
 double lastInput, lastTime;
-const int OutMin = -100;
-const int OutMax = 100;
+const int OutMin = -150;
+const int OutMax = 150;
 
 int SampleTime = 1000;
 double  systemtime;
 
 float distanceL, distanceR, distance;
 double ITerm, error;
-
-#define motor1 12
-#define motor2 12
-#define motor3 10
-#define motor4 9
-#define pwm12 13
-#define pwm34 9
+int motor1 = 12;
+int motor2 = 11;
+int motor3 = 10;
+int motor4 = 9;
+float pwm12 = 13;
+float pwm34 = 8;
 
 void setup()
 {
@@ -51,14 +50,14 @@ void loop()
 {
   LeftSensor();
   RightSensor();
-  if (distanceL - distanceR > 50)
+  if (distanceL - distanceR > 30)
   {
     TurnLeft();
     Serial.print("Power = ");
     Serial.print("Turn Left");
     Serial.print("\n");
   }
-  else if (distanceR - distanceL > 50)
+  else if (distanceR - distanceL > 30)
   {
     TurnRight();
     Serial.print("Power = ");
@@ -68,7 +67,7 @@ void loop()
   else
   {
     distance = (distanceL + distanceR) / 2;
-    Input = map(distance, 0, 500, 0, 255);
+    Input = distance;
     Serial.println(" \n ");
     Serial.println("Left = ");
     Serial.print(distanceL);
@@ -87,6 +86,7 @@ void loop()
       ITerm += (ki * error);
       double dInput = (Input - lastInput);
       Output = Kp * error + ITerm - kd * dInput;
+      
       if (Output > OutMax) Output = OutMax;
       else if (Output < OutMin) Output = OutMin;
       if (ITerm > OutMax) ITerm = OutMax;
@@ -94,13 +94,21 @@ void loop()
       lastInput = Input;
       lastTime = now;
     }
-    if (distance <= 400)
+    if (distance <= 30)
     {
       Serial.print("\n");
       Serial.print("Power = ");
       Serial.print(Output);
       Serial.print("\n");
-      motorPWM(Output);
+      if (Output >= 0)
+      {
+        motorPWM(Output);
+      }
+      else if (Output < 0)
+      {
+        motorPWM_back(Output);
+      }
+
     }
     else
     {
@@ -108,7 +116,7 @@ void loop()
       Serial.print("Power = ");
       Serial.print("80");
       Serial.print("\n");
-      motorPWM(80);
+      motorPWM(OutMax);
     }
   }
 
@@ -135,22 +143,22 @@ void RightSensor()
 }
 void TurnLeft()
 {
-  digitalWrite(motor1, 1);
-  digitalWrite(motor2, 0);
-  analogWrite(pwm12, 60);
+  digitalWrite(motor1, 0);
+  digitalWrite(motor2, 1);
+  analogWrite(pwm12, OutMax);
   digitalWrite(motor3, 1);
   digitalWrite(motor4, 0);
-  analogWrite(pwm34, 100);
+  analogWrite(pwm34, OutMax);
 
 }
 void TurnRight()
 {
   digitalWrite(motor1, 1);
   digitalWrite(motor2, 0);
-  analogWrite(pwm12, 100);
-  digitalWrite(motor3, 1);
-  digitalWrite(motor4, 0);
-  analogWrite(pwm34, 60);
+  analogWrite(pwm12, OutMax);
+  digitalWrite(motor3, 0);
+  digitalWrite(motor4, 1);
+  analogWrite(pwm34, OutMax);
 }
 void motorPWM(int pwm) {
   digitalWrite(motor1, 1);
@@ -158,5 +166,13 @@ void motorPWM(int pwm) {
   analogWrite(pwm12, pwm);
   digitalWrite(motor3, 1);
   digitalWrite(motor4, 0);
+  analogWrite(pwm34, pwm);
+}
+void motorPWM_back(int pwm) {
+  digitalWrite(motor1, 0);
+  digitalWrite(motor2, 1);
+  analogWrite(pwm12, pwm);
+  digitalWrite(motor3, 0);
+  digitalWrite(motor4, 1);
   analogWrite(pwm34, pwm);
 }
